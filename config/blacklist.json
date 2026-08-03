@@ -1,3 +1,6 @@
 {
-    "blocked_processes": []
+    "blacklisted_processes": [
+        "mimikatz.exe",
+        "psexec.exe"
+    ]
 }

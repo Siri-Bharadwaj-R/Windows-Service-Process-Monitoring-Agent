@@ -1,3 +1,5 @@
 {
-    "rules": []
+    "detect_suspicious_parent_child": true,
+    "detect_suspicious_paths": true,
+    "detect_unsigned_executables": true
 }
