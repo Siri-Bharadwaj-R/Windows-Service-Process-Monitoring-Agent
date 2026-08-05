@@ -110,5 +110,21 @@ def main() -> None:
     )
 
 
+from core.process_monitor import ProcessMonitor
+from core.process_tree import ProcessTree
+
+process_monitor = ProcessMonitor()
+processes = process_monitor.scan()
+
+tree_builder = ProcessTree()
+tree = tree_builder.build_tree(processes)
+
+print("\nParent PID: 4\n")
+
+for child in tree.get(4, []):
+    print(
+        f"{child['pid']:>6}  {child['name']}"
+    )
+
 if __name__ == "__main__":
     main()
