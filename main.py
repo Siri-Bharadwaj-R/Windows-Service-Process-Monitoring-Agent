@@ -13,8 +13,9 @@ from core.signature_verifier import SignatureVerifier
 from core.risk_engine import RiskEngine
 from core.report_generator import ReportGenerator
 
-from utils.logger import Logger
+from security_assessment_pdf.pdf_generator import SecurityAssessmentPDF
 
+from utils.logger import Logger
 
 LINE_WIDTH = 100
 
@@ -330,6 +331,44 @@ def main() -> None:
         "Windows security assessment completed."
     )
 
+    report_generator = ReportGenerator()
+
+    report_generator.generate_console_report(
+        processes=processes,
+        services=services,
+        findings=findings,
+    )
+
+    # =================================================
+    # PDF Security Assessment
+    # =================================================
+
+    pdf_generator = SecurityAssessmentPDF()
+
+    pdf_path = pdf_generator.generate(
+        processes=processes,
+        services=services,
+        findings=findings,
+        risk_score=risk_score,
+        risk_level=risk_level,
+        automatic_services=(
+            startup_audit.get_automatic_services()
+        ),
+        startup_findings=startup_findings,
+        signature_results=signature_results,
+        signature_findings=signature_findings,
+        signature_cache_size=len(
+            signature_verifier.signature_cache
+        ),
+    )
+
+    print(
+        f"\nPDF Report Generated : {pdf_path}"
+    )
+
+    logger.info(
+        "Windows security assessment completed."
+    )
 
 if __name__ == "__main__":
     main()
