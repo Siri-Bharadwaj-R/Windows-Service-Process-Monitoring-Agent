@@ -28,3 +28,6 @@ reports/
 # OS files
 Thumbs.db
 .DS_Store
+
+# Local service baseline
+config/service_baseline.json

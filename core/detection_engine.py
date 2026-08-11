@@ -22,10 +22,16 @@ class DetectionEngine:
 
         self.config_loader = ConfigLoader()
 
-        self.blacklist = self.config_loader.load_blacklist()
+        self.blacklist = (
+            self.config_loader.load_blacklist()
+        )
 
         # Stores all security findings
         self.findings: list[dict[str, str]] = []
+
+    # ========================================================
+    # FINDING MANAGEMENT
+    # ========================================================
 
     def add_finding(
         self,
@@ -75,12 +81,17 @@ class DetectionEngine:
             "Detection findings cleared."
         )
 
+    # ========================================================
+    # PARENT-CHILD PROCESS DETECTION
+    # ========================================================
+
     def detect_suspicious_parent_child(
         self,
         processes: list[dict[str, object]],
     ) -> None:
         """
-        Detect suspicious parent-child process relationships.
+        Detect suspicious parent-child
+        process relationships.
 
         Args:
             processes:
@@ -113,7 +124,9 @@ class DetectionEngine:
 
         for process in processes:
 
-            parent = process_lookup.get(process["ppid"])
+            parent = process_lookup.get(
+                process["ppid"]
+            )
 
             if parent is None:
                 continue
@@ -133,21 +146,30 @@ class DetectionEngine:
 
                 self.add_finding(
                     severity="HIGH",
-                    title="Suspicious Parent-Child Relationship",
+                    title=(
+                        "Suspicious Parent-Child "
+                        "Relationship"
+                    ),
                     category="Process Behavior",
                     description=(
                         f"{parent.get('name')} "
-                        f"spawned {process.get('name')}."
+                        f"spawned "
+                        f"{process.get('name')}."
                     ),
                     recommendation=(
                         "Investigate the originating "
-                        "Office document and child process."
+                        "Office document and child "
+                        "process."
                     ),
                 )
 
         self.logger.info(
             "Parent-child analysis completed."
         )
+
+    # ========================================================
+    # BLACKLIST DETECTION
+    # ========================================================
 
     def detect_blacklisted_processes(
         self,
@@ -183,12 +205,14 @@ class DetectionEngine:
 
                 self.add_finding(
                     severity="CRITICAL",
-                    title="Blacklisted Process Detected",
+                    title=(
+                        "Blacklisted Process Detected"
+                    ),
                     category="Process Reputation",
                     description=(
                         f"Blacklisted process "
                         f"'{process.get('name')}' "
-                        f"is currently running."
+                        "is currently running."
                     ),
                     recommendation=(
                         "Investigate the process "
@@ -201,10 +225,14 @@ class DetectionEngine:
         self.logger.info(
             "Blacklist analysis completed."
         )
-    
+
+    # ========================================================
+    # SUSPICIOUS EXECUTABLE PATH DETECTION
+    # ========================================================
+
     def detect_suspicious_paths(
-    self,
-    processes: list[dict[str, object]],
+        self,
+        processes: list[dict[str, object]],
     ) -> None:
         """
         Detect processes running from suspicious
@@ -234,6 +262,13 @@ class DetectionEngine:
             "\\appdata\\local\\webex\\",
         )
 
+        # Development environments that are expected
+        # to contain executable files.
+        trusted_development_locations = (
+            "\\.venv\\",
+            "\\venv\\",
+        )
+
         seen_paths: set[str] = set()
 
         for process in processes:
@@ -245,41 +280,71 @@ class DetectionEngine:
             if not executable:
                 continue
 
-            # Prevent duplicate alerts for the same executable
+            # Prevent duplicate alerts for
+            # the same executable.
             if executable in seen_paths:
                 continue
 
             seen_paths.add(executable)
 
+            # ------------------------------------------------
+            # Trusted development environments
+            # ------------------------------------------------
+
+            # The monitoring agent itself runs from a
+            # Python virtual environment. Do not classify
+            # its Python interpreter or installed packages
+            # as suspicious.
+            if any(
+                location in executable
+                for location in trusted_development_locations
+            ):
+                continue
+
             suspicious = False
 
+            # ------------------------------------------------
             # High-risk writable directories
+            # ------------------------------------------------
+
             if any(
                 location in executable
                 for location in suspicious_locations
             ):
                 suspicious = True
 
+            # ------------------------------------------------
             # AppData requires additional checks
+            # ------------------------------------------------
+
             elif "\\appdata\\" in executable:
 
                 trusted = any(
                     trusted_path in executable
-                    for trusted_path in trusted_appdata_locations
+                    for trusted_path in (
+                        trusted_appdata_locations
+                    )
                 )
 
                 if not trusted:
                     suspicious = True
 
+            # ------------------------------------------------
+            # Generate finding
+            # ------------------------------------------------
+
             if suspicious:
 
                 self.add_finding(
                     severity="MEDIUM",
-                    title="Suspicious Executable Path",
+                    title=(
+                        "Suspicious Executable Path"
+                    ),
                     category="Process Location",
                     description=(
-                        f"{process.get('name')} is running "
-                        f"from '{process.get('exe')}'."
+                        f"{process.get('name')} "
+                        "is running from "
+                        f"'{process.get('exe')}'."
                     ),
                     recommendation=(
                         "Verify that the executable "
