@@ -8,7 +8,7 @@ from pathlib import Path
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER
-from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.platypus import (
@@ -34,12 +34,18 @@ from .digital_signature_results import (
 from .security_findings import build_security_findings
 from .recommendations import build_recommendations
 
+
 def wrap_path(path):
+    """
+    Display Windows paths safely in the PDF.
+    """
+
     if not path:
         return ""
 
-    # Display Windows paths safely in the PDF.
     return str(path).replace("\\", "/")
+
+
 LINE_WIDTH = 100
 
 
@@ -112,6 +118,13 @@ class SecurityAssessmentPDF:
             fontSize=7,
             leading=9,
             spaceAfter=3,
+        )
+
+        self.process_table_style = ParagraphStyle(
+            "ProcessTableText",
+            parent=self.styles["BodyText"],
+            fontSize=7,
+            leading=9,
         )
 
     def _header_footer(
@@ -280,6 +293,256 @@ class SecurityAssessmentPDF:
 
         story.append(
             Spacer(1, 8)
+        )
+
+    def _build_parent_child_relationships(
+        self,
+        processes: list[dict[str, object]],
+        maximum: int | None = None,
+    ) -> list[list[str]]:
+        """
+        Build a clean parent-child relationship table
+        from the collected process information.
+
+        Only relationships where the parent process is
+        present in the collected process set are included.
+
+        Self-referencing relationships such as
+        PID 0 -> PID 0 are ignored.
+        """
+
+        process_index: dict[int, dict[str, object]] = {}
+
+        for process in processes:
+
+            pid = process.get("pid")
+
+            if isinstance(pid, int):
+                process_index[pid] = process
+
+        relationships: list[list[str]] = []
+
+        for child in processes:
+
+            child_pid = child.get("pid")
+            parent_pid = child.get("ppid")
+
+            if not isinstance(child_pid, int):
+                continue
+
+            if not isinstance(parent_pid, int):
+                continue
+
+            # Ignore self-referencing process relationships.
+            if child_pid == parent_pid:
+                continue
+
+            parent = process_index.get(parent_pid)
+
+            if parent is None:
+                continue
+
+            parent_name = str(
+                parent.get("name") or "Unknown"
+            )
+
+            child_name = str(
+                child.get("name") or "Unknown"
+            )
+
+            relationships.append(
+                [
+                    parent_name,
+                    str(parent_pid),
+                    child_name,
+                    str(child_pid),
+                ]
+            )
+
+            if maximum is not None and len(relationships) >= maximum:
+                break
+
+        return relationships
+
+    def _add_parent_child_section(
+        self,
+        story: list,
+        processes: list[dict[str, object]],
+    ) -> None:
+        """
+        Add the parent-child process relationship section.
+
+        The section displays a limited number of real
+        parent-child relationships collected during the scan.
+        """
+
+        story.append(
+            Paragraph(
+                "9. Parent–Child Process Relationships",
+                self.section_style,
+            )
+        )
+
+        story.append(
+            Paragraph(
+                "The process tree analysis maps each running "
+                "process to its parent process using Process IDs "
+                "(PID) and Parent Process IDs (PPID). This helps "
+                "identify unusual process chains and provides "
+                "context for behavioral security analysis.",
+                self.body_style,
+            )
+        )
+
+        relationships = self._build_parent_child_relationships(
+            processes,
+        )
+
+        if not relationships:
+
+            story.append(
+                Paragraph(
+                    "No parent-child process relationships "
+                    "were available for reporting.",
+                    self.body_style,
+                )
+            )
+
+            return
+
+        relationship_data = [
+            [
+                "Parent Process",
+                "Parent PID",
+                "Child Process",
+                "Child PID",
+            ]
+        ]
+
+        for relationship in relationships:
+
+            relationship_data.append(
+                [
+                    Paragraph(
+                        relationship[0],
+                        self.process_table_style,
+                    ),
+                    relationship[1],
+                    Paragraph(
+                        relationship[2],
+                        self.process_table_style,
+                    ),
+                    relationship[3],
+                ]
+            )
+
+        relationship_table = Table(
+            relationship_data,
+            repeatRows=1,
+            colWidths=[
+                55 * mm,
+                25 * mm,
+                65 * mm,
+                25 * mm,
+            ],
+        )
+
+        relationship_table.setStyle(
+            TableStyle(
+                [
+                    (
+                        "BACKGROUND",
+                        (0, 0),
+                        (-1, 0),
+                        colors.HexColor("#1F2937"),
+                    ),
+                    (
+                        "TEXTCOLOR",
+                        (0, 0),
+                        (-1, 0),
+                        colors.white,
+                    ),
+                    (
+                        "FONTNAME",
+                        (0, 0),
+                        (-1, 0),
+                        "Helvetica-Bold",
+                    ),
+                    (
+                        "FONTSIZE",
+                        (0, 0),
+                        (-1, 0),
+                        8,
+                    ),
+                    (
+                        "GRID",
+                        (0, 0),
+                        (-1, -1),
+                        0.5,
+                        colors.grey,
+                    ),
+                    (
+                        "VALIGN",
+                        (0, 0),
+                        (-1, -1),
+                        "MIDDLE",
+                    ),
+                    (
+                        "ALIGN",
+                        (1, 1),
+                        (1, -1),
+                        "CENTER",
+                    ),
+                    (
+                        "ALIGN",
+                        (3, 1),
+                        (3, -1),
+                        "CENTER",
+                    ),
+                    (
+                        "LEFTPADDING",
+                        (0, 0),
+                        (-1, -1),
+                        5,
+                    ),
+                    (
+                        "RIGHTPADDING",
+                        (0, 0),
+                        (-1, -1),
+                        5,
+                    ),
+                    (
+                        "TOPPADDING",
+                        (0, 0),
+                        (-1, -1),
+                        5,
+                    ),
+                    (
+                        "BOTTOMPADDING",
+                        (0, 0),
+                        (-1, -1),
+                        5,
+                    ),
+                ]
+            )
+        )
+
+        story.append(
+            relationship_table
+        )
+
+        story.append(
+            Spacer(1, 8)
+        )
+
+        story.append(
+            Paragraph(
+                "The table above presents representative "
+                "parent-child relationships identified during "
+                "the assessment. Additional relationships may "
+                "be available in the detailed monitoring logs.",
+                self.small_style,
+            )
         )
 
     def generate(
@@ -497,6 +760,7 @@ class SecurityAssessmentPDF:
             "LOW",
             "INFO",
         ]:
+
             statistics_data.append(
                 [
                     severity,
@@ -582,7 +846,9 @@ class SecurityAssessmentPDF:
                     [
                         "Description",
                         Paragraph(
-                            wrap_path(finding["description"]),
+                            wrap_path(
+                                finding["description"]
+                            ),
                             self.body_style,
                         ),
                     ],
@@ -711,7 +977,9 @@ class SecurityAssessmentPDF:
             )
         )
 
-        story.append(process_table)
+        story.append(
+            process_table
+        )
 
         story.append(
             PageBreak()
@@ -811,7 +1079,9 @@ class SecurityAssessmentPDF:
             )
         )
 
-        story.append(service_table)
+        story.append(
+            service_table
+        )
 
         story.append(
             PageBreak()
@@ -1004,12 +1274,25 @@ class SecurityAssessmentPDF:
         )
 
         # -------------------------------------------------
+        # Parent-Child Process Relationships
+        # -------------------------------------------------
+
+        self._add_parent_child_section(
+            story,
+            processes,
+        )
+
+        story.append(
+            PageBreak()
+        )
+
+        # -------------------------------------------------
         # Recommendations
         # -------------------------------------------------
 
         story.append(
             Paragraph(
-                "9. Security Recommendations",
+                "10. Security Recommendations",
                 self.section_style,
             )
         )

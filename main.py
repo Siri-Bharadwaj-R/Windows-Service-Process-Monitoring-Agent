@@ -932,10 +932,207 @@ def print_top_findings(
 # BOTTOM PANELS
 # ============================================================
 
-def print_bottom_panels() -> None:
+def print_bottom_panels(
+    process_tree,
+    processes,
+) -> None:
     """
-    Display recommendation and next-step panels.
+    Display parent-child relationships,
+    recommendations, and next-step panels.
     """
+
+    # ============================================================
+    # PARENT-CHILD PROCESS RELATIONSHIPS PANEL
+    # ============================================================
+    def print_parent_child_panel(
+        process_tree,
+        processes: list[dict[str, object]],
+    ) -> None:
+        """
+        Display representative parent-child process
+        relationships in a formatted terminal box.
+        """
+
+        BOX = 84
+
+        print()
+
+    # --------------------------------------------------------
+    # Collect relationships
+    # --------------------------------------------------------
+
+        relationships = []
+
+        for process in processes:
+
+            pid = process.get("pid")
+            ppid = process.get("ppid")
+
+            if pid is None or ppid is None:
+                continue
+
+            child_name = str(
+                process.get("name", "Unknown")
+            )
+
+            parent = process_tree.process_index.get(
+                ppid
+            )
+
+            if parent:
+
+                parent_name = str(
+                    parent.get("name", "Unknown")
+                )
+
+            else:
+
+                parent_name = "Unknown"
+
+            relationships.append(
+                (
+                    parent_name,
+                    int(ppid),
+                    child_name,
+                    int(pid),
+                )
+            )
+
+    # --------------------------------------------------------
+    # Panel borders
+    # --------------------------------------------------------
+
+        print(
+            paint(
+                "╭" + "─" * BOX + "╮",
+                CYAN,
+            )
+        )
+
+        title = (
+            "PARENT-CHILD PROCESS RELATIONSHIPS"
+        )
+
+        print(
+            paint("│", CYAN)
+            + paint(
+                title.center(BOX),
+                MAGENTA,
+                True,
+            )
+            + paint("│", CYAN)
+        )
+
+        print(
+            paint(
+                "├" + "─" * BOX + "┤",
+                CYAN,
+            )
+        )
+
+    # --------------------------------------------------------
+    # Display relationships
+    # --------------------------------------------------------
+
+        display_limit = 10
+
+        for index, (
+            parent_name,
+            parent_pid,
+            child_name,
+            child_pid,
+        ) in enumerate(
+            relationships[:display_limit],
+            start=1,
+        ):
+
+            line = (
+                f"{index:02d}. "
+                f"{parent_name} (PID {parent_pid}) "
+                f"→ "
+                f"{child_name} (PID {child_pid})"
+            )
+
+            # Keep line inside the box
+            if len(line) > BOX - 2:
+
+                line = (
+                    line[:BOX - 5]
+                    + "..."
+                )
+
+            print(
+                paint("│", CYAN)
+                + " "
+                + line.ljust(BOX - 2)
+                + " "
+                + paint("│", CYAN)
+            )
+
+    # --------------------------------------------------------
+    # Empty state
+    # --------------------------------------------------------
+
+        if not relationships:
+
+            message = (
+                "No parent-child relationships found."
+            )
+
+            print(
+                paint("│", CYAN)
+                + " "
+                + message.center(BOX - 2)
+                + " "
+                + paint("│", CYAN)
+            )
+
+    # --------------------------------------------------------
+    # Relationship count
+    # --------------------------------------------------------
+
+        if relationships:
+
+            count_text = (
+                f"Showing "
+                f"{min(display_limit, len(relationships))} "
+                f"of {len(relationships)} relationships"
+            )
+
+        else:
+
+            count_text = "No relationships available"
+
+        print(
+            paint("│", CYAN)
+            + " "
+            + paint(
+                count_text.center(BOX - 2),
+                YELLOW,
+            )
+            + " "
+            + paint("│", CYAN)
+        )
+
+        print(
+            paint(
+                "╰" + "─" * BOX + "╯",
+                CYAN,
+            )
+        )
+  
+    # ============================================================
+    # SHOW PARENT-CHILD PANEL
+    # ============================================================
+
+    print_parent_child_panel(
+        process_tree,
+        processes,
+    )
+
+    # ============================================================
+    # RECOMMENDATION + NEXT STEPS
+    # ============================================================
 
     BOX = 36
     GAP = "   "
@@ -1297,7 +1494,6 @@ def main() -> None:
     process_tree.build_tree(
         processes
     )
-    process_tree.print_summary()
     
     parent_nodes = get_parent_node_count(
         process_tree
@@ -1547,7 +1743,10 @@ def main() -> None:
     # RECOMMENDATIONS
     # ========================================================
 
-    print_bottom_panels()
+    print_bottom_panels(
+        process_tree,
+        processes,
+    )
 
     # ========================================================
     # PDF SECURITY ASSESSMENT
