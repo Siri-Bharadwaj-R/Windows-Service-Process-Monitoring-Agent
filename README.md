@@ -410,7 +410,8 @@ Windows-Service-Process-Monitoring-Agent/
 ├── config/
 │   ├── whitelist.json
 │   ├── blacklist.json
-│   └── rules.json
+│   ├── rules.json
+│   └── service_baseline.json
 │
 ├── core/
 │   ├── __init__.py
@@ -424,13 +425,33 @@ Windows-Service-Process-Monitoring-Agent/
 │   ├── signature_verifier.py
 │   └── report_generator.py
 │
+├── security_assessment_pdf/
+│   ├── digital_signature_results.py
+│   ├── finding_statistics.py
+│   ├── pdf_generator.py
+│   ├── process_information.py
+│   ├── recommendations.py
+│   ├── risk_overview.py
+│   ├── scan_information.py
+│   ├── security_findings.py
+│   ├── service_information.py
+│   └── startup_audit.py
+│
 ├── utils/
 │   ├── __init__.py
 │   ├── logger.py
-│   └── config_loader.py
+│   ├── config_loader.py
+│   └── display.py
 │
-├── security_assessment_pdf/
-│   └── pdf_generator.py
+├── tests/
+│   ├── test_detection_engine.py
+│   ├── test_process_monitor.py
+│   ├── test_process_tree.py
+│   ├── test_report_generator.py
+│   ├── test_risk_engine.py
+│   ├── test_service_monitor.py
+│   ├── test_signature_verifier.py
+│   └── test_startup_audit.py
 │
 ├── docs/
 │   └── TESTING.md
@@ -440,6 +461,8 @@ Windows-Service-Process-Monitoring-Agent/
 │
 ├── reports/
 │   └── Security_Assessment_*.pdf
+│
+├── screenshots/
 │
 ├── main.py
 ├── requirements.txt
