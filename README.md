@@ -1,408 +1,230 @@
-# 🛡️ Windows Service & Process Monitoring Agent
+# Windows Service & Process Monitoring Agent
 
-> A Windows security assessment agent for process monitoring, service auditing, behavioral detection, digital-signature verification, risk scoring, and security reporting.
+A Windows security assessment agent for analyzing processes, services, startup configurations, process hierarchies, and executable signatures to identify suspicious or potentially unauthorized activity.
 
-The **Windows Service & Process Monitoring Agent** is a Python-based defensive security tool designed to analyze Windows endpoint activity and identify potentially suspicious process and service behavior.
-
-The agent collects system telemetry, analyzes process relationships, audits Windows services, checks executable signatures, detects suspicious configurations, calculates an overall security risk score, and generates a detailed security assessment report.
+The agent combines **process monitoring, rule-based detection, service auditing, digital signature verification, risk scoring, structured logging, and automated PDF reporting** into a single security assessment workflow.
 
 ---
 
-## 🎯 Project Overview
+## Overview
 
-Windows processes and services are common targets for malware, persistence mechanisms, privilege escalation, and execution abuse.
+Windows processes and services are common targets for malware execution, persistence, privilege escalation, and defense evasion.
 
-This project provides a lightweight security assessment framework that examines these components using rule-based detection techniques.
+This project provides a practical defensive security framework that examines the current state of a Windows system and identifies security-relevant anomalies through configurable detection rules and security baselines.
 
-The complete assessment follows this workflow:
+The assessment covers:
 
-```text
-                    WINDOWS ENDPOINT
-                           │
-             ┌─────────────┴─────────────┐
-             ▼                           ▼
-      PROCESS ENUMERATION        SERVICE ENUMERATION
-             │                           │
-             ▼                           ▼
-      PROCESS TREE ANALYSIS        STARTUP AUDIT
-             │                           │
-             └─────────────┬─────────────┘
-                           ▼
-                  DETECTION ENGINE
-                           │
-             ┌─────────────┼─────────────┐
-             ▼             ▼             ▼
-       BEHAVIORAL       PATH &       SIGNATURE
-       DETECTION       SERVICE       VERIFICATION
-                       ANALYSIS
-             │             │             │
-             └─────────────┼─────────────┘
-                           ▼
-                      RISK ENGINE
-                           │
-                  ┌────────┴────────┐
-                  ▼                 ▼
-            CONSOLE REPORT      PDF REPORT
-                  │                 │
-                  └────────┬────────┘
-                           ▼
-                  SECURITY ASSESSMENT
-```
+- Active processes and executable information
+- Parent-child process relationships
+- Windows service configurations
+- Startup services and service permissions
+- Whitelist and blacklist rules
+- Executable digital signatures
+- Security findings and severity levels
+- Overall system risk
+- Recommendations and remediation steps
 
 ---
 
-## 💡 Why This Project?
+## Features
 
-Windows systems are frequently targeted by malware that abuses processes and services to establish persistence, execute malicious code, escalate privileges, or hide activity.
+### Process Monitoring
 
-The project focuses on identifying suspicious endpoint configurations and runtime behavior through:
-
-- Process monitoring
-- Process relationship analysis
-- Windows service auditing
-- Startup service analysis
-- Rule-based detection
-- Executable path analysis
-- Digital signature verification
-- Service permission analysis
-- Risk scoring
-- Structured security reporting
-
-The goal is to provide a practical defensive-security assessment tool that helps identify areas requiring further investigation.
-
----
-
-## 🎯 Project Objectives
-
-The project was developed to:
-
-- Monitor active Windows processes
-- Collect process and parent-process information
-- Build parent-child process relationships
-- Detect suspicious process behavior
-- Identify blacklisted processes
-- Detect suspicious executable locations
-- Enumerate and audit Windows services
-- Analyze automatic/startup services
-- Detect suspicious service configurations
-- Detect potentially weak service permissions
-- Detect newly added or modified services using a service baseline
-- Verify executable digital signatures
-- Generate security findings and recommendations
-- Calculate an overall system risk score
-- Maintain timestamped assessment logs
-- Generate detailed security assessment reports
-
----
-
-# 🔍 Key Features
-
-## 1. Process Monitoring
-
-The agent enumerates active Windows processes and collects information such as:
+Collects information about currently running Windows processes, including:
 
 - Process name
-- Process ID (PID)
-- Parent Process ID (PPID)
+- PID
+- Parent PID
 - Executable path
-- Process metadata
+- Process information required for security analysis
 
-The collected information is passed to the analysis and detection components.
+### Parent-Child Process Analysis
 
----
+Builds a process hierarchy using PID and PPID relationships.
 
-## 2. Parent-Child Process Analysis
-
-The agent builds relationships between processes using Process IDs and Parent Process IDs.
-
-This allows suspicious execution chains to be identified.
+The analysis helps identify unusual process lineage and provides visibility into how processes were spawned.
 
 Example:
 
 ```text
-Microsoft Word
-      │
-      └── PowerShell
+services.exe
+    └── svchost.exe
+         └── child_process.exe
 ```
 
-Office applications spawning scripting interpreters such as:
+Representative relationships are displayed in the terminal and included in the generated security assessment report.
 
-- `powershell.exe`
-- `cmd.exe`
-- `wscript.exe`
-- `cscript.exe`
-- `mshta.exe`
+### Windows Service Monitoring
 
-can generate a security finding for further investigation.
+Enumerates Windows services and analyzes relevant service configuration information, including executable paths and startup configuration.
 
----
+### Startup Service Auditing
 
-## 3. Blacklisted Process Detection
+Audits automatically starting services to identify potentially risky configurations.
 
-Running processes are compared against configured blacklist entries.
+The audit can detect issues such as:
 
-The blacklist is stored in:
-
-```text
-config/blacklist.json
-```
-
-A matching process can generate a high-severity security finding.
-
----
-
-## 4. Suspicious Executable Path Detection
-
-The agent analyzes executable locations and identifies processes running from potentially risky directories.
-
-Examples include:
-
-```text
-Temp
-Downloads
-Desktop
-Public
-```
-
-AppData locations are also analyzed with trusted application paths taken into consideration.
-
-Development environments such as:
-
-```text
-.venv
-venv
-```
-
-are excluded from suspicious-path detection to reduce false positives when the monitoring agent itself is running inside a Python virtual environment.
-
----
-
-## 5. Windows Service Auditing
-
-The agent enumerates Windows services and collects information including:
-
-- Service name
-- Display name
-- State
-- Start mode
-- Executable path
-- Service account
-- Process ID
-- Description
-
-This information is used for service configuration and startup analysis.
-
----
-
-## 6. Startup Service Auditing
-
-Automatic-start services receive additional security analysis.
-
-The startup audit checks for potentially suspicious configurations including:
-
-- Suspicious executable paths
-- Unexpected service accounts
-- Missing executable paths
 - Weak service permissions
-- Service configuration changes
-- Newly detected services
+- Suspicious service configurations
+- Unusual executable locations
+- Potential service-based privilege escalation risks
 
----
+### Unauthorized & Suspicious Process Detection
 
-## 7. Service Permission Analysis
+Uses configurable security rules to identify processes that require investigation.
 
-The agent analyzes Windows service security configuration and identifies potentially dangerous service-management permissions granted to broad principals.
+Detection includes:
 
-The assessment can identify permissions such as:
+- Whitelist comparison
+- Blacklist comparison
+- Executable path analysis
+- Process relationship analysis
+- Suspicious runtime conditions
+
+### Digital Signature Verification
+
+Checks executable files for valid digital signatures.
+
+Unsigned or unverifiable executables are reported as security findings so that their origin and authorization can be reviewed.
+
+### Rule-Based Detection
+
+Detection logic is separated from the monitoring components through configurable JSON files.
 
 ```text
-SERVICE_CHANGE_CONFIG
-WRITE_DAC
-WRITE_OWNER
-GENERIC_WRITE
-GENERIC_ALL
+config/
+├── whitelist.json
+├── blacklist.json
+├── rules.json
+└── service_baseline.json
 ```
 
-Potentially dangerous permissions are reported as security findings for investigation.
+This allows security rules and baselines to be modified without changing the core monitoring architecture.
 
-The agent does not automatically modify the affected service configuration.
+### Risk Assessment
 
----
-
-## 8. New & Modified Service Detection
-
-The agent maintains a local Windows service baseline:
+Findings are classified into:
 
 ```text
-config/service_baseline.json
-```
-
-The baseline is intentionally local and is excluded from version control.
-
-It can be used to identify changes between assessments, including:
-
-- Newly added services
-- Modified service executable paths
-- Modified startup modes
-- Modified service accounts
-
-This provides a simple mechanism for detecting service configuration changes over time.
-
----
-
-## 9. Digital Signature Verification
-
-Executable files associated with running processes are checked for digital signatures.
-
-The verification process records information such as:
-
-- Executable path
-- Signature status
-- Publisher information
-- Verification result
-
-Unsigned executables are reported as security findings requiring investigation.
-
-> **Important:** An unsigned executable is not automatically malicious. It is treated as a security observation that should be investigated.
-
----
-
-# ⚠️ Risk Assessment
-
-Security findings generated by the detection components are passed to the risk engine.
-
-The agent calculates an overall:
-
-```text
-Risk Score: 0–100
-```
-
-and maps the result to a severity level:
-
-```text
-LOW
-MEDIUM
-HIGH
 CRITICAL
+HIGH
+MEDIUM
+LOW
+INFO
 ```
+
+The agent calculates an overall system risk score based on the detected findings.
 
 Example:
 
 ```text
-╭──────────────────────────────────────╮
-│          SECURITY ASSESSMENT         │
-├──────────────────────────────────────┤
-│ Processes Scanned : 325              │
-│ Services Scanned  : 311              │
-│ Findings          : 5                │
-│ Risk Score        : 75 / 100         │
-│ Risk Level        : HIGH             │
-╰──────────────────────────────────────╯
+Risk: 75/100  HIGH
 ```
 
-The risk score provides a high-level summary of the findings identified during the assessment.
+### Automated Security Reporting
 
----
+After an assessment, the agent generates a structured PDF security report containing:
 
-# 📊 Reporting
-
-The agent provides both a formatted command-line security assessment and a detailed PDF report.
-
-## Console Reporting
-
-The CLI displays:
-
-- Scan progress
-- Number of processes collected
-- Number of services collected
-- Detection findings
-- Startup audit results
-- Signature verification results
-- Risk score
-- Risk level
-- Scan duration
-- Security findings
-- Recommendations
-- PDF report location
-
-The assessment follows seven primary stages:
-
-```text
-[1/7] Collecting active Windows processes
-[2/7] Collecting Windows services
-[3/7] Building parent-child process tree
-[4/7] Running security detections
-[5/7] Auditing startup services
-[6/7] Verifying executable digital signatures
-[7/7] Calculating overall system risk
-```
-
----
-
-## 📄 PDF Security Report
-
-After the assessment completes, a detailed PDF report is generated under:
-
-```text
-reports/
-```
-
-The report contains sections covering:
-
-- Scan information
-- Risk summary
-- Security findings
+- Scan summary
+- System risk assessment
+- Severity distribution
+- Detailed security findings
 - Process information
-- Windows service information
-- Startup service audit
-- Digital signature verification
+- Service information
+- Parent-child relationships
+- Startup service findings
+- Digital signature results
 - Recommendations
-- Final assessment
+- Next steps
+- Scan information
 
-The PDF provides a consolidated record of the security assessment.
+### Logging
 
----
-
-# 📝 Logging
-
-Assessment activity is recorded in:
+Assessment activity is recorded in timestamped application logs.
 
 ```text
 logs/application.log
 ```
 
-The logging system records events such as:
-
-- Process scanning
-- Windows service scanning
-- Process-tree construction
-- Detection analysis
-- Startup service auditing
-- Digital signature verification
-- Risk assessment
-- Report generation
-- Assessment completion
-
-Logs contain timestamps and severity levels to support troubleshooting and security analysis.
+The logs provide a trace of the assessment process, detection results, auditing activity, and report generation.
 
 ---
 
-# 🧰 Technology Stack
+## Detection Workflow
 
-| Technology | Purpose |
+```text
+START
+  │
+  ▼
+Enumerate Processes & Services
+  │
+  ▼
+Collect Process & Service Information
+  │
+  ▼
+Build Parent-Child Process Tree
+  │
+  ▼
+Run Security Detection Rules
+  │
+  ├── Whitelist / Blacklist Analysis
+  ├── Process Relationship Analysis
+  └── Executable Path Analysis
+  │
+  ▼
+Audit Startup Services
+  │
+  ├── Service Configuration
+  └── Service Permissions
+  │
+  ▼
+Verify Executable Digital Signatures
+  │
+  ▼
+Calculate System Risk
+  │
+  ▼
+Generate Findings & Recommendations
+  │
+  ▼
+Generate PDF Security Assessment
+  │
+  ▼
+END
+```
+
+---
+
+## Detection Categories
+
+| Detection Area | Purpose |
 |---|---|
-| **Python** | Core implementation |
-| **psutil** | Process enumeration and system telemetry |
-| **WMI** | Windows service enumeration |
-| **pywin32** | Windows-specific integration |
-| **ReportLab** | PDF report generation |
-| **Colorama** | CLI formatting and presentation |
+| Process Monitoring | Enumerates and analyzes active processes |
+| Parent-Child Analysis | Examines process lineage and relationships |
+| Whitelist Detection | Identifies processes outside the approved baseline |
+| Blacklist Detection | Detects configured prohibited processes |
+| Executable Path Analysis | Examines potentially suspicious executable locations |
+| Service Monitoring | Collects and analyzes Windows service information |
+| Startup Service Audit | Examines automatically starting services |
+| Service Permissions | Detects potentially weak service permissions |
+| Digital Signatures | Identifies unsigned or unverifiable executables |
+| Risk Assessment | Calculates overall system security risk |
 
 ---
 
-# 🏗️ Project Architecture
+## Security Assessment Report
 
-The project is organized into separate monitoring, detection, analysis, reporting, and utility components.
+Each completed assessment generates a PDF report in:
+
+```text
+reports/
+```
+
+The report provides a consolidated view of the system assessment, including detailed findings and supporting process, service, startup, and signature information.
+
+---
+
+## Project Architecture
 
 ```text
 Windows-Service-Process-Monitoring-Agent/
@@ -414,16 +236,15 @@ Windows-Service-Process-Monitoring-Agent/
 │   └── service_baseline.json
 │
 ├── core/
-│   ├── __init__.py
+│   ├── detection_engine.py
 │   ├── process_monitor.py
 │   ├── process_tree.py
-│   ├── service_monitor.py
-│   ├── startup_audit.py
-│   ├── detection_engine.py
-│   ├── rule_engine.py
+│   ├── report_generator.py
 │   ├── risk_engine.py
+│   ├── rule_engine.py
+│   ├── service_monitor.py
 │   ├── signature_verifier.py
-│   └── report_generator.py
+│   └── startup_audit.py
 │
 ├── security_assessment_pdf/
 │   ├── digital_signature_results.py
@@ -438,10 +259,9 @@ Windows-Service-Process-Monitoring-Agent/
 │   └── startup_audit.py
 │
 ├── utils/
-│   ├── __init__.py
-│   ├── logger.py
 │   ├── config_loader.py
-│   └── display.py
+│   ├── display.py
+│   └── logger.py
 │
 ├── tests/
 │   ├── test_detection_engine.py
@@ -462,43 +282,70 @@ Windows-Service-Process-Monitoring-Agent/
 ├── reports/
 │   └── Security_Assessment_*.pdf
 │
-├── screenshots/
-│
 ├── main.py
 ├── requirements.txt
 ├── README.md
 └── .gitignore
 ```
 
-> `config/service_baseline.json` is generated locally by the application and intentionally excluded from version control.
+---
+
+## Technologies
+
+### Programming
+
+- Python
+
+### Windows System Monitoring
+
+- psutil
+- Windows process information
+- Windows service interfaces
+- Executable signature verification
+
+### Security
+
+- Rule-based detection
+- Process hierarchy analysis
+- Service security auditing
+- Whitelist / blacklist analysis
+- Digital signature verification
+- Risk scoring
+
+### Reporting
+
+- ReportLab
+- Automated PDF generation
+
+### Testing
+
+- Python testing framework
+- Unit tests for monitoring, detection, process trees, risk analysis, reporting, service auditing, startup auditing, and signature verification
 
 ---
 
-# ⚙️ Installation
+## Installation
 
-## 1. Clone the repository
+Clone the repository:
 
 ```powershell
 git clone https://github.com/Siri-Bharadwaj-R/Windows-Service-Process-Monitoring-Agent.git
-```
-
-```powershell
 cd Windows-Service-Process-Monitoring-Agent
 ```
 
-## 2. Create a virtual environment
+Create a virtual environment:
 
 ```powershell
 python -m venv .venv
 ```
 
-## 3. Activate the virtual environment
+Activate the virtual environment:
 
 ```powershell
-.venv\Scripts\Activate.ps1
+.venv\Scripts\activate
 ```
 
-## 4. Install dependencies
+Install dependencies:
 
 ```powershell
 pip install -r requirements.txt
@@ -506,225 +353,52 @@ pip install -r requirements.txt
 
 ---
 
-# ▶️ Running the Agent
+## Usage
 
-Run the monitoring agent from the project root:
-
-```powershell
-python main.py
-```
-
-The complete assessment pipeline is executed:
-
-```text
-Process Enumeration
-        ↓
-Service Enumeration
-        ↓
-Process Tree Construction
-        ↓
-Security Detection
-        ↓
-Startup Service Audit
-        ↓
-Digital Signature Verification
-        ↓
-Risk Assessment
-        ↓
-Console + PDF Reporting
-```
-
-After completion, review:
-
-```text
-logs/
-```
-
-for assessment logs and:
-
-```text
-reports/
-```
-
-for generated security assessment reports.
-
----
-
-# 🧪 Testing & Validation
-
-Testing and validation documentation is available in:
-
-```text
-docs/TESTING.md
-```
-
-The implementation has been validated using the following checks.
-
-## Syntax Validation
-
-```powershell
-python -m compileall core utils security_assessment_pdf main.py
-```
-
-All Python source files compiled successfully without syntax errors.
-
-## Core Module Import Validation
-
-The major monitoring, detection, risk assessment, reporting, and PDF generation modules were successfully imported.
-
-Expected result:
-
-```text
-ALL CORE IMPORTS OK
-```
-
-## End-to-End Validation
+Run the security assessment from the project directory:
 
 ```powershell
 python main.py
 ```
 
-The complete assessment pipeline was successfully executed, including:
+The agent will perform the complete assessment and display the results in the terminal.
 
-1. Process enumeration
-2. Windows service enumeration
-3. Process tree construction
-4. Security detection
-5. Startup service auditing
-6. Digital signature verification
-7. Risk assessment
-8. Console reporting
-9. PDF report generation
-
----
-
-# 🛡️ Security Scope
-
-This project is designed as a **defensive Windows security monitoring and assessment tool**.
-
-It can be used for:
-
-- Endpoint security analysis
-- Windows security monitoring
-- Detection engineering
-- Security research and learning
-- Defensive cybersecurity experimentation
-- Security assessment reporting
-
-The agent focuses on:
-
-```text
-OBSERVE → DETECT → ASSESS → REPORT
-```
-
-The agent does not automatically:
-
-- Terminate processes
-- Delete services
-- Modify service permissions
-- Remove executable files
-- Remediate detected threats
-
-Detected findings should be investigated and validated before taking corrective action.
-
----
-
-# 🚫 Project Limitations
-
-This project is **not**:
-
-- ❌ An antivirus
-- ❌ A malware removal tool
-- ❌ A kernel-mode security driver
-- ❌ A commercial EDR solution
-- ❌ A replacement for Windows Defender
-- ❌ A complete digital-forensics platform
-
-The detection engine is rule-based and therefore may produce findings that require manual investigation.
-
-For example:
-
-> An unsigned executable or suspicious service path does not automatically mean that the file or service is malicious.
-
----
-
-# 🔮 Future Improvements
-
-Potential future extensions include:
-
-- Real-time event-driven process monitoring
-- Windows Event Log integration
-- Advanced behavioral analytics
-- Expanded service ACL analysis
-- Improved executable reputation analysis
-- Authenticode certificate-chain validation
-- Persistent historical service baselines
-- Email or webhook alerting
-- Interactive graphical dashboard
-- MITRE ATT&CK technique mapping
-- Multi-host monitoring
-- Centralized endpoint monitoring
-
----
-
-# 📚 Documentation
-
-Additional testing and validation information:
-
-```text
-docs/TESTING.md
-```
-
-Generated security assessment reports:
+A PDF security assessment will be generated automatically in:
 
 ```text
 reports/
 ```
 
-Runtime logs:
+Application logs will be stored in:
 
 ```text
-logs/
+logs/application.log
 ```
 
 ---
 
-# 📌 Project Status
+## Testing
 
-**Status: ✅ Functional Security Assessment Agent**
+Run the complete test suite with:
 
-The current implementation includes:
+```powershell
+python -m unittest discover tests
+```
 
-- Process enumeration
-- Process-tree analysis
-- Parent-child detection
-- Blacklist detection
-- Suspicious executable-path detection
-- Windows service enumeration
-- Startup service auditing
-- Service permission analysis
-- New/modified service detection
-- Digital signature verification
-- Risk scoring
-- CLI security reporting
-- PDF security assessment
-- Centralized logging
-- Testing and validation documentation
+The test suite covers the major monitoring, detection, analysis, reporting, and verification components.
 
 ---
 
-# 👩‍💻 Project
+## Security Considerations
 
-## Windows Service & Process Monitoring Agent
+This project is intended for defensive security assessment and monitoring of Windows systems.
 
-A practical Windows defensive-security project focused on:
+Some Windows process, service, permission, or executable information may require elevated privileges depending on the system configuration.
 
-```text
-╔══════════════════════════════════════════╗
-║                                          ║
-║       MONITOR → DETECT → ASSESS → REPORT ║
-║                                          ║
-╚══════════════════════════════════════════╝
-```
+Findings should be reviewed before performing remediation or configuration changes.
 
-Built with **Python** for Windows endpoint security analysis and defensive monitoring.
+---
+
+## License
+
+This project was developed as part of an internship project.
