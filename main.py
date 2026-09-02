@@ -1297,7 +1297,8 @@ def main() -> None:
     process_tree.build_tree(
         processes
     )
-
+    process_tree.print_summary()
+    
     parent_nodes = get_parent_node_count(
         process_tree
     )
